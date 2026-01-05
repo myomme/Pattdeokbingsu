@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>팥떡빙수 & 붕어빵</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Pretendard", sans-serif; margin: 16px; background:#f6f7fb; }
+    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 12px; }
+    .card { background: white; border-radius: 14px; padding: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.06); }
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+    .grow { flex: 1; }
+    button { border:0; border-radius: 10px; padding:10px 12px; cursor:pointer; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mono { font-variant-numeric: tabular-nums; }
+    .badge { padding:4px 8px; border-radius:999px; background:#eef2ff; }
+    img.sign { width:100%; height:auto; display:block; border-radius: 12px; }
+    .small { color:#667; font-size: 13px; }
+
+    /* 주문 UI (오른쪽 카드 상단 + 내부 스크롤) */
+    .orderBox { border:1px solid #e8eaf2; border-radius: 12px; padding: 10px; margin: 10px 0 14px; background:#fbfcff; }
+    .orderTitle { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .orderTitle b { font-size: 14px; }
+    .orderList { margin-top:8px; display:grid; gap:6px; max-height: 140px; overflow: auto; padding-right: 4px; }
+    .pill { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:#eef2ff; }
+
+    /* 제작 섹션(빙수/붕어빵) 분리 */
+    .makeGrid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:12px; }
+    .makeCard{ border:1px solid #e8eaf2; border-radius: 14px; padding:12px; background:#fbfcff; }
+    .makeHead{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:10px; }
+    .makeHead b{ font-size:14px; }
+    .makeReq{ color:#667; font-size:12px; white-space:nowrap; }
+    .makeCard button{ width:100%; }
+
+    /* ✅ 상점: 2개의 그룹(빙수/붕어빵) */
+    .shopGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    .shopGroup{
+      border:1px solid #e8eaf2;
+      border-radius:14px;
+      padding:12px;
+      background:#fbfcff;
+    }
+    .shopGroupTitle{
+      font-weight:800;
+      font-size:14px;
+      margin-bottom:10px;
+      color:#223;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+
+    /* ✅ 상점 카드(가독성 + 버튼 찢어짐 방지) */
+    .shop-item{
+      display:grid;
+      grid-template-columns: 1fr 108px;
+      gap:10px;
+      padding:12px;
+      border:1px solid #e8eaf2;
+      border-radius:14px;
+      background:#fff;
+      align-items:start;
+      margin-top:10px;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .shop-item:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0,0,0,.08);
+}
+    .shopGroup .shop-item:first-of-type{ margin-top:0; }
+
+    .shop-title{
+      display:flex;
+      gap:8px;
+      align-items:baseline;
+      margin-bottom:6px;
+      min-width:0;
+    }
+    .shop-title b{ font-size:14px; }
+    .shop-title .cur{ color:#667; font-size:12px; white-space:nowrap; }
+
+    .shop-meta{
+      display:grid;
+      gap:4px;
+      font-size:12px;
+      color:#556;
+    }
+
+    .shop-actions{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .shop-actions button.upBtn{
+  background:#f1f3f7;
+  color:#223;
+}
+button:active{
+  transform: translateY(1px);
+}
+
+.shop-actions button.upBtn.can{
+  background:#d9f99d;   /* 연한 연두 */
+  color:#1a2e05;
+  font-weight:700;
+}
+
+.shop-actions button.upBtn.can:hover{
+  background:#bef264;
+    }
+    .shop-actions button.primary{ background:#111827; color:#fff; }
+    .shop-actions button.secondary{ background:#f1f3f7; color:#223; }
+    .shop-actions button:disabled{ opacity:.45; }
+
+    @media (max-width: 820px){
+      .grid{ grid-template-columns: 1fr; }
+      .shopGrid{ grid-template-columns: 1fr; }
+      .makeGrid{ grid-template-columns: 1fr; }
+    }
+
+    .icon{
+  width:32px;
+  height:32px;
+  display:inline-block;
+  vertical-align:middle;
+  image-rendering: pixelated; /* 픽셀 느낌 원하면 */
+}
+
+.icon.sm{
+  width:20px;
+  height:20px;
+}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <img class="sign" src="assets/Title/title.png" alt="팥떡빙수 & 붕어빵 간판" />
+  </div>
+
+  <div class="card row">
+    <div class="grow">
+      <div class="row">
+        <div class="badge mono">소지금: <span id="money"></span>원</div>
+        <div class="badge mono">포장마차 가치(V): <span id="value"></span></div>
+        <div class="badge mono">누적 매출: <span id="revenue"></span>원</div>
+        <div class="badge mono">대기 주문: <span id="orderCount"></span>건</div>
+        <div class="badge mono">손님: <span id="custProg"></span></div>
+      </div>
+      <div class="small" style="margin-top:8px;">
+        랜덤 타이밍으로 손님이 주문합니다. 주문 수량만큼 만들어서 납품하면 돈이 즉시 들어옵니다.
+      </div>
+    </div>
+    <button id="resetBtn" title="처음부터">리셋</button>
+  </div>
+
+  <div class="grid">
+    <!-- 왼쪽: 상점 -->
+    <div class="card">
+      <h3 style="margin:0 0 8px;">상점</h3>
+      <div id="shop"></div>
+    </div>
+
+    <!-- 오른쪽: 주문 + 인벤 + 제작 -->
+    <div class="card">
+      <h3 style="margin:0 0 8px;">인벤토리 / 가격 / 제작</h3>
+
+      <div class="orderBox">
+        <div class="orderTitle">
+          <b>현재 주문</b>
+          <span class="small mono" id="nextCustomerHint"></span>
+        </div>
+        <div class="orderList" id="orderPanel"></div>
+        <div class="small" style="margin-top:8px;">
+          ※ 현재 주문이 없으면 만들어도 판매되지 않습니다(그냥 “만든 척”만 함). 주문 받고 만드는 게임 느낌.
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="badge">
+  <img class="icon sm" src="assets/icons/redbean.png">
+  팥 <span class="mono" id="inv_redbean"></span>
+</div>
+        <div class="badge">
+  <img class="icon sm" src="assets/icons/ricecake.png">
+  떡 <span class="mono" id="inv_ricecake"></span>
+</div>
+        <div class="badge">
+  <img class="icon sm" src="assets/icons/ice.png">
+  제빙기 <span class="mono" id="inv_ice"></span>
+</div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <div class="badge">
+  <img class="icon sm" src="assets/icons/batter.png">
+  반죽 <span class="mono" id="inv_batter"></span>
+</div>
+        <div class="badge">
+  <img class="icon sm" src="assets/icons/milk.png">
+  우유 <span class="mono" id="inv_milk"></span>
+</div>
+        <div class="badge">
+  <img class="icon sm" src="assets/icons/paste.png">
+  팥앙금 <span class="mono" id="inv_paste"></span>
+</div>
+      </div>
+
+      <hr style="border:none;border-top:1px solid #eef0f6;margin:12px 0;" />
+
+      <div class="makeGrid">
+        <div class="makeCard">
+          <div class="makeHead">
+            <b>🍧 팥떡빙수</b>
+            <span class="makeReq">필요: 팥+떡+제빙기</span>
+          </div>
+          <div class="mono" style="margin-bottom:6px;">
+            가격: <span id="p_bingsu"></span>원 (상한 <span id="cap_bingsu"></span>)
+          </div>
+          <input id="s_bingsu" type="range" min="500" max="8000" step="100" style="width:100%;" />
+          <div style="margin-top:10px;"><button id="makeBingsu">팥떡빙수 만들기</button></div>
+          <div class="small" style="margin-top:8px;">※ 제빙기는 장비라 소모되지 않습니다.</div>
+        </div>
+
+        <div class="makeCard">
+          <div class="makeHead">
+            <b>🐟 붕어빵</b>
+            <span class="makeReq">필요: 반죽+우유+팥앙금</span>
+          </div>
+          <div class="mono" style="margin-bottom:6px;">
+            가격: <span id="p_fish"></span>원 (상한 <span id="cap_fish"></span>)
+          </div>
+          <input id="s_fish" type="range" min="200" max="4000" step="50" style="width:100%;" />
+          <div style="margin-top:10px;"><button id="makeFish">붕어빵 만들기</button></div>
+          <div class="small" style="margin-top:8px;">※ 재료는 제작 시 소모됩니다.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+<div class="card">
+  <h3 style="margin:0 0 8px;">랭킹</h3>
+
+  <div class="row" style="margin-bottom:8px;">
+    <input id="playerName" placeholder="닉네임(2~10자)" maxlength="10"
+           style="flex:1; padding:10px 12px; border:1px solid #e8eaf2; border-radius:10px;" />
+    <button id="submitRank">랭킹 등록</button>
+  </div>
+
+  <div class="small" style="margin-bottom:6px;">
+    내 누적 매출: <b class="mono" id="myRevenueRank"></b>원
+  </div>
+
+  <div id="rankList" class="small"></div>
+</div>
+  <div class="card">
+    <h3 style="margin:0 0 8px;">로그</h3>
+    <div id="log" class="small"></div>
+  </div>
+</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import {
+  getFirestore,
+  doc, setDoc, getDoc,
+  collection, query, orderBy, limit, getDocs,
+  serverTimestamp,
+  addDoc
+} from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB_i5aelwz0zJ335lkM3gp17LsIuMRFoeU",
+    authDomain: "patddeok-3760c.firebaseapp.com",
+    projectId: "patddeok-3760c",
+    storageBucket: "patddeok-3760c.firebasestorage.app",
+    messagingSenderId: "249192870616",
+    appId: "1:249192870616:web:27c55c7c983a28ca995dad",
+    measurementId: "G-VRE68WVTHE"
+  };
+
+  window.firebaseReady = (async () => {
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    const cred = await signInAnonymously(auth);
+
+    window._db = db;
+    window._uid = cred.user.uid;
+    window._fs = { doc, setDoc, getDoc, collection, query, orderBy, limit, getDocs, serverTimestamp, addDoc };
+
+
+
+    return true;
+  })();
+</script>
+
+<script>
+  /************************************************************
+   * 상태
+   ************************************************************/
+  const state = {
+    money: 10000,
+    revenue: 0,
+    value: 0,
+    inv: { redbean:0, ricecake:0, ice:0, batter:0, milk:0, paste:0 },
+    price: { bingsu: 2000, fish: 700 },
+
+    orders: [],
+    nextCustomerAt: 0,
+    customerTimerId: null,
+    upgrades: {
+      redbeanTier: 0,
+      ricecakeTier: 0,
+      iceTier: 0,
+      batterTier: 0,
+      milkTier: 0,
+    },
+    run: {
+    maxCustomers: 100,
+    customersSpawned: 0,
+    ended: false,
+    endAt: 0
+  },
+  bestRunScore: 0, // (선택) 로컬 최고 기록
+  };
+
+  const REDBEAN_TIERS = [
+    { name: "아라리",   buyCost: 300, valueUpBuy: 1 },
+    { name: "흰나래",   buyCost: 650, valueUpBuy: 2 },
+    { name: "검구슬",   buyCost: 1400, valueUpBuy: 3 },
+    { name: "연두채",   buyCost: 3200, valueUpBuy: 5 },
+    { name: "홍다",     buyCost: 7500, valueUpBuy: 8 },
+  ];
+
+  const RICECAKE_TIERS = [
+    { name: "인절미",     buyCost: 400,  valueUpBuy: 1 },
+    { name: "찹쌀떡",     buyCost: 900,  valueUpBuy: 2 },
+    { name: "찹쌀경단",   buyCost: 2000, valueUpBuy: 3 },
+    { name: "수수경단",   buyCost: 4500, valueUpBuy: 5 },
+    { name: "콩가루경단", buyCost: 10000,valueUpBuy: 8 },
+    { name: "실백경단",   buyCost: 22000,valueUpBuy: 12 },
+  ];
+
+  const ICE_TIERS = [
+    { name: "레트로 제빙기", buyCost: 2500,  valueUpBuy: 8 },
+    { name: "일반 제빙기",   buyCost: 8000,  valueUpBuy: 12 },
+    { name: "고급제빙기",   buyCost: 24000, valueUpBuy: 18 },
+  ];
+
+  const BATTER_TIERS = [
+    { name: "옥수수가루", buyCost: 250,  valueUpBuy: 1 },
+    { name: "찹쌀가루",   buyCost: 600,  valueUpBuy: 2 },
+    { name: "흑미가루",   buyCost: 1400, valueUpBuy: 3 },
+    { name: "보리가루",   buyCost: 3200, valueUpBuy: 5 },
+    { name: "카카오가루", buyCost: 7500, valueUpBuy: 8 },
+    { name: "녹차가루",   buyCost: 17000,valueUpBuy: 12 },
+  ];
+
+  const MILK_TIERS = [
+    { name: "가공유",        buyCost: 200,  valueUpBuy: 1 },
+    { name: "2등급 우유",    buyCost: 600,  valueUpBuy: 2 },
+    { name: "1B등급 우유",   buyCost: 1800, valueUpBuy: 4 },
+    { name: "1A등급 우유",   buyCost: 5200, valueUpBuy: 7 },
+  ];
+
+const REDBEAN_UPGRADE_RULE   = { base: 800,  growth: 2.4, needBase: 8,  needStep: 14 };
+const RICECAKE_UPGRADE_RULE  = { base: 900,  growth: 2.3, needBase: 8,  needStep: 14 };
+const BATTER_UPGRADE_RULE    = { base: 800,  growth: 2.4, needBase: 8,  needStep: 14 };
+const MILK_UPGRADE_RULE      = { base: 700,  growth: 2.2, needBase: 7,  needStep: 12 };
+
+// 제빙기는 원래도 무거우니 더 무겁게
+const ICE_UPGRADE_RULE       = { base: 2000, growth: 2.6, needBase: 20, needStep: 22 };
+
+  function upgradeCost(rule, nextTier){ return Math.floor(rule.base * (rule.growth ** nextTier)); }
+const UPGRADE_V_MULT = 1.6; // 1.2 ~ 2.5 사이로 조절
+
+function needValue(rule, nextTier){
+  const v = rule.needBase + rule.needStep * nextTier;
+  return Math.ceil(v * UPGRADE_V_MULT);
+}
+
+  const items = [
+    { key:"paste", name:"🍯 팥앙금", cost:350, valueUp: 1 },
+  ];
+
+  const el = (id)=>document.getElementById(id);
+  const fmt = (n)=>Math.floor(n).toLocaleString("ko-KR");
+  /************************************************************
+ * 랭킹(파이어스토어)
+ ************************************************************/
+const RANK_COLLECTION = "leaderboard_v1";
+const LS_NAME_KEY = "patddeok_name_v1";
+
+function getPlayerName(){
+  const input = el("playerName");
+  const saved = localStorage.getItem(LS_NAME_KEY) || "";
+  const name = (input?.value || saved || "손님").trim();
+  return name || "손님";
+}
+
+
+let _rankSaveCooldown = 0;
+
+async function saveMyRank(revenueToSave){
+  if (!window._db || !window._uid || !window._fs) return;
+
+  const name = getPlayerName();
+  const { collection, addDoc, serverTimestamp } = window._fs;
+
+  await addDoc(collection(window._db, RANK_COLLECTION), {
+    uid: window._uid,
+    name,
+    revenue: Number(revenueToSave ?? 0),
+    customers: state.run?.customersSpawned ?? 0,     // ✅ 몇 명까지 받았는지
+    maxCustomers: state.run?.maxCustomers ?? 100,    // ✅ 기준(보통 100)
+    createdAt: serverTimestamp()
+  });
+}
+
+
+
+
+async function loadTopRanks(){
+  if (!window._db || !window._fs) return;
+
+  const { collection, query, orderBy, limit, getDocs } = window._fs;
+  const q = query(
+    collection(window._db, RANK_COLLECTION),
+    orderBy("revenue", "desc"),
+    limit(10)
+  );
+
+  const snap = await getDocs(q);
+  const rows = [];
+  snap.forEach(docu => rows.push(docu.data()));
+
+  renderRanks(rows);
+}
+
+async function loadMyRankIntoUI(){
+  if (!window._db || !window._uid || !window._fs) return;
+  const { doc, getDoc } = window._fs;
+
+  const ref = doc(window._db, RANK_COLLECTION, window._uid);
+  const snap = await getDoc(ref);
+
+  const my = snap.exists() ? snap.data() : { revenue: 0, name: "" };
+  el("myRevenueRank").textContent = fmt(my.revenue || 0);
+
+  // 닉네임 입력칸도 로컬 저장값으로 채워주기(편의)
+  const savedName = localStorage.getItem(LS_NAME_KEY) || my.name || "";
+  if (el("playerName") && !el("playerName").value) el("playerName").value = savedName;
+}
+
+
+function renderRanks(rows){
+  const box = el("rankList");
+  if (!box) return;
+
+  if (!rows.length){
+    box.textContent = "아직 랭킹 데이터가 없습니다.";
+    return;
+  }
+
+  box.innerHTML = rows.map((r, i) => {
+    const n = (r?.name ?? "손님");
+    const rev = fmt(r?.revenue ?? 0);
+    return `<div class="mono">${i+1}. ${escapeHtml(n)} — ${rev}원</div>`;
+  }).join("");
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, (m)=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[m]));
+}
+
+  const now = ()=>Date.now();
+
+  function log(msg){
+    const div = document.createElement("div");
+    div.textContent = msg;
+    el("log").prepend(div);
+  }
+
+  /************************************************************
+   * 가격 상한
+   ************************************************************/
+  function caps(){
+    const capB = 3000 + state.value * 120;
+    const capF = 1000 + state.value * 60;
+    return { capB, capF };
+  }
+
+  /************************************************************
+   * 주문 UI
+   ************************************************************/
+  function renderOrders(){
+    const panel = el("orderPanel");
+    panel.innerHTML = "";
+
+    el("orderCount").textContent = state.orders.length;
+
+    const cur = state.orders[0];
+    if (!cur){
+      const empty = document.createElement("div");
+      empty.className = "small";
+      empty.textContent = "현재 주문 없음 (손님이 올 때까지 기다리세요)";
+      panel.appendChild(empty);
+      return;
+    }
+
+    const line1 = document.createElement("div");
+    line1.className = "pill mono";
+    line1.textContent = `🧑 손님 주문 #1  |  빙수 ${cur.bingsu}개, 붕어빵 ${cur.fish}개`;
+    panel.appendChild(line1);
+
+    if (state.orders.length > 1){
+      const more = document.createElement("div");
+      more.className = "small mono";
+      more.textContent = `뒤에 ${state.orders.length - 1}건 더 대기 중`;
+      panel.appendChild(more);
+    }
+  }
+
+  function updateNextCustomerHint(){
+    const t = state.nextCustomerAt;
+    if (!t){ el("nextCustomerHint").textContent = ""; return; }
+    const sec = Math.max(0, Math.ceil((t - now())/1000));
+    el("nextCustomerHint").textContent = `다음 손님 예상: ${sec}s`;
+  }
+
+  /************************************************************
+   * UI 동기화
+   ************************************************************/
+  function syncUI(){
+    el("money").textContent = fmt(state.money);
+    el("revenue").textContent = fmt(state.revenue);
+    el("value").textContent = state.value;
+    el("custProg").textContent = `${state.run.customersSpawned}/${state.run.maxCustomers}`;
+
+    for (const k of Object.keys(state.inv)) el("inv_"+k).textContent = state.inv[k];
+
+    const { capB, capF } = caps();
+    el("cap_bingsu").textContent = fmt(capB);
+    el("cap_fish").textContent = fmt(capF);
+
+    state.price.bingsu = Math.min(state.price.bingsu, capB);
+    state.price.fish = Math.min(state.price.fish, capF);
+
+    el("s_bingsu").max = capB;
+    el("s_fish").max = capF;
+
+    el("s_bingsu").value = state.price.bingsu;
+    el("s_fish").value = state.price.fish;
+
+    el("p_bingsu").textContent = fmt(state.price.bingsu);
+    el("p_fish").textContent = fmt(state.price.fish);
+
+    el("makeBingsu").disabled = !(state.inv.redbean>=1 && state.inv.ricecake>=1 && state.inv.ice>=1);
+    el("makeFish").disabled   = !(state.inv.batter>=1 && state.inv.milk>=1 && state.inv.paste>=1);
+
+    renderOrders();
+  }
+
+  /************************************************************
+   * 구매
+   ************************************************************/
+  function buy(key){
+    if (key === "redbean") {
+      const t = REDBEAN_TIERS[state.upgrades.redbeanTier];
+      if (state.money < t.buyCost) return log("돈이 부족합니다.");
+      state.money -= t.buyCost;
+      state.value += t.valueUpBuy;
+      state.inv.redbean += 1;
+      log(`🫘 팥(${t.name}) 구매 (-${fmt(t.buyCost)}원) / 가치 +${t.valueUpBuy}`);
+      renderShop(); syncUI(); return;
+    }
+
+    if (key === "ricecake") {
+      const t = RICECAKE_TIERS[state.upgrades.ricecakeTier];
+      if (state.money < t.buyCost) return log("돈이 부족합니다.");
+      state.money -= t.buyCost;
+      state.value += t.valueUpBuy;
+      state.inv.ricecake += 1;
+      log(`🍡 떡(${t.name}) 구매 (-${fmt(t.buyCost)}원) / 가치 +${t.valueUpBuy}`);
+      renderShop(); syncUI(); return;
+    }
+
+    if (key === "ice") {
+      if (state.inv.ice >= 1) return log("제빙기는 이미 보유 중입니다.");
+      const t = ICE_TIERS[state.upgrades.iceTier];
+      if (state.money < t.buyCost) return log("돈이 부족합니다.");
+      state.money -= t.buyCost;
+      state.value += t.valueUpBuy;
+      state.inv.ice += 1;
+      log(`🧊 제빙기(${t.name}) 구매 (-${fmt(t.buyCost)}원) / 가치 +${t.valueUpBuy}`);
+      renderShop(); syncUI(); return;
+    }
+
+    if (key === "batter") {
+      const t = BATTER_TIERS[state.upgrades.batterTier];
+      if (state.money < t.buyCost) return log("돈이 부족합니다.");
+      state.money -= t.buyCost;
+      state.value += t.valueUpBuy;
+      state.inv.batter += 1;
+      log(`🥣 반죽(${t.name}) 구매 (-${fmt(t.buyCost)}원) / 가치 +${t.valueUpBuy}`);
+      renderShop(); syncUI(); return;
+    }
+
+    if (key === "milk") {
+      const t = MILK_TIERS[state.upgrades.milkTier];
+      if (state.money < t.buyCost) return log("돈이 부족합니다.");
+      state.money -= t.buyCost;
+      state.value += t.valueUpBuy;
+      state.inv.milk += 1;
+      log(`🥛 우유(${t.name}) 구매 (-${fmt(t.buyCost)}원) / 가치 +${t.valueUpBuy}`);
+      renderShop(); syncUI(); return;
+    }
+
+    // 팥앙금(일반 구매)
+    const it = items.find(x=>x.key===key);
+    if (!it) return;
+    if (state.money < it.cost) return log("돈이 부족합니다.");
+    state.money -= it.cost;
+    state.value += it.valueUp;
+    state.inv[key] += 1;
+    log(`${it.name} 구매 (-${fmt(it.cost)}원) / 가치 +${it.valueUp}`);
+    renderShop(); syncUI();
+  }
+
+  /************************************************************
+   * 업그레이드
+   ************************************************************/
+  function upgradeRedbean(){
+    const cur = state.upgrades.redbeanTier;
+    if (cur >= REDBEAN_TIERS.length - 1) return log("팥은 이미 최고 등급입니다.");
+    const next = cur + 1;
+    const cost = upgradeCost(REDBEAN_UPGRADE_RULE, next);
+    const needV = needValue(REDBEAN_UPGRADE_RULE, next);
+    if (state.value < needV) return log(`가치(V)가 부족합니다. 필요 V≥${needV}`);
+    if (state.money < cost) return log(`업그레이드 비용 부족 (-${fmt(cost)}원 필요)`);
+    state.money -= cost;
+    state.upgrades.redbeanTier = next;
+    log(`⬆️ 팥 업그레이드: ${REDBEAN_TIERS[cur].name} → ${REDBEAN_TIERS[next].name} (-${fmt(cost)}원)`);
+    renderShop(); syncUI();
+  }
+
+  function upgradeRicecake(){
+    const cur = state.upgrades.ricecakeTier;
+    if (cur >= RICECAKE_TIERS.length - 1) return log("떡은 이미 최고 등급입니다.");
+    const next = cur + 1;
+    const cost = upgradeCost(RICECAKE_UPGRADE_RULE, next);
+    const needV = needValue(RICECAKE_UPGRADE_RULE, next);
+    if (state.value < needV) return log(`가치(V)가 부족합니다. 필요 V≥${needV}`);
+    if (state.money < cost) return log(`업그레이드 비용 부족 (-${fmt(cost)}원 필요)`);
+    state.money -= cost;
+    state.upgrades.ricecakeTier = next;
+    log(`⬆️ 떡 업그레이드: ${RICECAKE_TIERS[cur].name} → ${RICECAKE_TIERS[next].name} (-${fmt(cost)}원)`);
+    renderShop(); syncUI();
+  }
+
+  function upgradeIce(){
+    const cur = state.upgrades.iceTier;
+    if (cur >= ICE_TIERS.length - 1) return log("제빙기는 이미 최고 등급입니다.");
+    const next = cur + 1;
+    const cost = upgradeCost(ICE_UPGRADE_RULE, next);
+    const needV = needValue(ICE_UPGRADE_RULE, next);
+    if (state.value < needV) return log(`가치(V)가 부족합니다. 필요 V≥${needV}`);
+    if (state.money < cost) return log(`업그레이드 비용 부족 (-${fmt(cost)}원 필요)`);
+    state.money -= cost;
+    state.upgrades.iceTier = next;
+    log(`⬆️ 제빙기 업그레이드: ${ICE_TIERS[cur].name} → ${ICE_TIERS[next].name} (-${fmt(cost)}원)`);
+    renderShop(); syncUI();
+  }
+
+  function upgradeBatter(){
+    const cur = state.upgrades.batterTier;
+    if (cur >= BATTER_TIERS.length - 1) return log("반죽은 이미 최고 등급입니다.");
+    const next = cur + 1;
+    const cost = upgradeCost(BATTER_UPGRADE_RULE, next);
+    const needV = needValue(BATTER_UPGRADE_RULE, next);
+    if (state.value < needV) return log(`가치(V)가 부족합니다. 필요 V≥${needV}`);
+    if (state.money < cost) return log(`업그레이드 비용 부족 (-${fmt(cost)}원 필요)`);
+    state.money -= cost;
+    state.upgrades.batterTier = next;
+    log(`⬆️ 반죽 업그레이드: ${BATTER_TIERS[cur].name} → ${BATTER_TIERS[next].name} (-${fmt(cost)}원)`);
+    renderShop(); syncUI();
+  }
+
+  function upgradeMilk(){
+    const cur = state.upgrades.milkTier;
+    if (cur >= MILK_TIERS.length - 1) return log("우유는 이미 최고 등급입니다.");
+    const next = cur + 1;
+    const cost = upgradeCost(MILK_UPGRADE_RULE, next);
+    const needV = needValue(MILK_UPGRADE_RULE, next);
+    if (state.value < needV) return log(`가치(V)가 부족합니다. 필요 V≥${needV}`);
+    if (state.money < cost) return log(`업그레이드 비용 부족 (-${fmt(cost)}원 필요)`);
+    state.money -= cost;
+    state.upgrades.milkTier = next;
+    log(`⬆️ 우유 업그레이드: ${MILK_TIERS[cur].name} → ${MILK_TIERS[next].name} (-${fmt(cost)}원)`);
+    renderShop(); syncUI();
+  }
+
+  /************************************************************
+   * 제작/납품
+   ************************************************************/
+  function sellAttempt(productName, price, baseWtp){
+    const wtp = baseWtp + state.value*40 + randInt(-200, 200);
+    if (price <= wtp){
+      state.money += price;
+      state.revenue += price;
+      log(`✅ ${productName} 납품 +${fmt(price)}원 (손님 WTP=${fmt(wtp)})`);
+    } else {
+      log(`❌ ${productName} 거절 (가격 ${fmt(price)} > WTP ${fmt(wtp)})`);
+    }
+
+  }
+
+  function fulfillOne(product){
+    const cur = state.orders[0];
+    if (product === "bingsu") {
+      if (cur.bingsu <= 0) return log("현재 주문에는 빙수가 더 이상 필요 없습니다.");
+      cur.bingsu -= 1;
+      sellAttempt("빙수", state.price.bingsu, 2000);
+    } else {
+      if (cur.fish <= 0) return log("현재 주문에는 붕어빵이 더 이상 필요 없습니다.");
+      cur.fish -= 1;
+      sellAttempt("붕어빵", state.price.fish, 700);
+    }
+
+    if (cur.bingsu === 0 && cur.fish === 0){
+      state.orders.shift();
+      log("✅ 주문 완료! 다음 손님 대기.");
+    }
+    tryEndRun();
+    syncUI();
+  }
+  function tryEndRun(){
+  if (state.run.ended) return;
+
+  const allCustomersArrived = state.run.customersSpawned >= state.run.maxCustomers;
+  const noPendingOrders = state.orders.length === 0;
+
+  if (allCustomersArrived && noPendingOrders){
+    state.run.ended = true;
+    state.run.endAt = now();
+    clearTimeout(state.customerTimerId);
+    state.customerTimerId = null;
+    state.nextCustomerAt = 0;
+
+    log(`🏁 게임 종료! 최종 매출: ${fmt(state.revenue)}원 (손님 ${state.run.maxCustomers}명)`);
+    // 여기서 랭킹 등록을 "가능" 상태로 만들거나, 자동 저장(원하면)
+  }
+}
+
+  function makeBingsu(){
+    if (state.orders.length === 0) return log("대기 중인 손님이 없습니다. 손님이 올 때까지 기다리세요.");
+    if (!(state.inv.redbean>=1 && state.inv.ricecake>=1 && state.inv.ice>=1)) return;
+    state.inv.redbean -= 1;
+    state.inv.ricecake -= 1;
+    fulfillOne("bingsu");
+  }
+
+  function makeFish(){
+    if (state.orders.length === 0) return log("대기 중인 손님이 없습니다. 손님이 올 때까지 기다리세요.");
+    if (!(state.inv.batter>=1 && state.inv.milk>=1 && state.inv.paste>=1)) return;
+    state.inv.batter -= 1;
+    state.inv.milk -= 1;
+    state.inv.paste -= 1;
+    fulfillOne("fish");
+  }
+
+  function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+
+  /************************************************************
+   * 손님 생성
+   ************************************************************/
+   function scheduleNextCustomer(){
+  if (state.run.ended) return;
+  if (state.run.customersSpawned >= state.run.maxCustomers) return;
+
+  const ms = randInt(7000, 30000);
+  state.nextCustomerAt = now() + ms;
+  updateNextCustomerHint();
+
+  clearTimeout(state.customerTimerId);
+  state.customerTimerId = setTimeout(()=>{
+    spawnCustomerOrder();
+    scheduleNextCustomer();
+  }, ms);
+}
+
+  function spawnCustomerOrder(){
+  if (state.run.ended) return;
+
+  // 100명 제한
+  if (state.run.customersSpawned >= state.run.maxCustomers) {
+    // 더 이상 손님 안 받음(스케줄도 중단은 scheduleNextCustomer에서 처리)
+    return;
+  }
+
+  state.run.customersSpawned += 1;
+
+  const b = randInt(0, 3);
+  const f = randInt(1, 6);
+  state.orders.push({ id: crypto.randomUUID(), bingsu: b, fish: f, createdAt: now() });
+
+  log(`🧑 손님 #${state.run.customersSpawned} 등장! "빙수 ${b}개, 붕어빵 ${f}개 주세요!"`);
+  syncUI();
+
+  // 100번째 손님 생성 직후: 다음 손님 스케줄 끊기
+  if (state.run.customersSpawned >= state.run.maxCustomers) {
+    state.nextCustomerAt = 0;
+    clearTimeout(state.customerTimerId);
+    state.customerTimerId = null;
+    log("⛔ 오늘 장사 마감! (마지막 주문들 처리 후 종료됩니다)");
+  }
+}
+
+
+  setInterval(updateNextCustomerHint, 1000);
+
+  /************************************************************
+   * ✅ 상점 렌더(정리본)
+   ************************************************************/
+  function makeTierCard({ iconTitle, tierArr, tierKey, buyKey, upgradeFn, rule, extraBuyLine="" }){
+  const tier = state.upgrades[tierKey];
+  const t = tierArr[tier];
+  const canUpgrade = tier < tierArr.length - 1;
+  const nextTier = Math.min(tier + 1, tierArr.length - 1);
+
+  const needV = canUpgrade ? needValue(rule, nextTier) : null;
+  const upCost = canUpgrade ? upgradeCost(rule, nextTier) : null;
+
+  const div = document.createElement("div");
+  div.className = "shop-item";
+  div.innerHTML = `
+    <div>
+      <div class="shop-title">
+        <b>${iconTitle}</b>
+        <span class="cur">(현재: ${t.name})</span>
+      </div>
+      <div class="shop-meta">
+        <div class="mono">구매: ${fmt(t.buyCost)}원 · V+${t.valueUpBuy}${extraBuyLine}</div>
+        <div class="mono">
+          ${canUpgrade
+            ? `업글: ${tierArr[tier].name}→${tierArr[nextTier].name} · ${fmt(upCost)}원 · V≥${needV}`
+            : `업글: 최고 등급`
+          }
+        </div>
+      </div>
+    </div>
+    <div class="shop-actions">
+      <button class="buyBtn primary">구매</button>
+      <button class="upBtn${canUpgrade ? " can" : ""}" ${canUpgrade ? "" : "disabled"}>업글</button>
+    </div>
+  `;
+
+  div.querySelector(".buyBtn").onclick = ()=>buy(buyKey);
+
+  const upBtn = div.querySelector(".upBtn");
+  if (canUpgrade) {
+    upBtn.onclick = upgradeFn;
+
+    // 돈/V 조건 부족하면 비활성 + 색 제거
+    if (state.value < needV || state.money < upCost) {
+      upBtn.disabled = true;
+      upBtn.classList.remove("can");
+    }
+  }
+
+  return div;
+}
+
+
+  function makeSimpleCard(){
+  const it = items[0]; // paste
+  const div = document.createElement("div");
+  div.className = "shop-item";
+  div.innerHTML = `
+    <div>
+      <div class="shop-title">
+        <b>${it.name}</b>
+        <span class="cur">(일반)</span>
+      </div>
+      <div class="shop-meta">
+        <div class="mono">구매: ${fmt(it.cost)}원 · V+${it.valueUp}</div>
+        <div class="mono">업글: 없음</div>
+      </div>
+    </div>
+    <div class="shop-actions">
+      <button class="buyBtn primary">구매</button>
+      <button class="upBtn" disabled>업글</button>
+    </div>
+  `;
+  div.querySelector(".buyBtn").onclick = ()=>buy("paste");
+  return div;
+}
+
+
+  function renderShop(){
+    const root = el("shop");
+    root.innerHTML = "";
+
+    const grid = document.createElement("div");
+    grid.className = "shopGrid";
+
+    const g1 = document.createElement("div");
+    g1.className = "shopGroup";
+    g1.innerHTML = `<div class="shopGroupTitle">빙수 라인 <span class="small">🫘+🍡+🧊</span></div>`;
+
+    const g2 = document.createElement("div");
+    g2.className = "shopGroup";
+    g2.innerHTML = `<div class="shopGroupTitle">붕어빵 라인 <span class="small">🥣+🥛+🍯</span></div>`;
+
+    // 빙수 라인: 팥/떡/제빙기
+    g1.appendChild(makeTierCard({
+      iconTitle: `<img class="icon" src="assets/icons/redbean.png"> 팥`,
+      tierArr: REDBEAN_TIERS,
+      tierKey: "redbeanTier",
+      buyKey: "redbean",
+      upgradeFn: upgradeRedbean,
+      rule: REDBEAN_UPGRADE_RULE
+    }));
+
+    g1.appendChild(makeTierCard({
+      iconTitle: `<img class="icon" src="assets/icons/ricecake.png"> 떡`,
+      tierArr: RICECAKE_TIERS,
+      tierKey: "ricecakeTier",
+      buyKey: "ricecake",
+      upgradeFn: upgradeRicecake,
+      rule: RICECAKE_UPGRADE_RULE
+    }));
+
+    g1.appendChild(makeTierCard({
+      iconTitle: `<img class="icon" src="assets/icons/ice.png"> 제빙기`,
+      tierArr: ICE_TIERS,
+      tierKey: "iceTier",
+      buyKey: "ice",
+      upgradeFn: upgradeIce,
+      rule: ICE_UPGRADE_RULE,
+      extraBuyLine: state.inv.ice>=1 ? " (보유중)" : ""
+    }));
+
+    // 붕어빵 라인: 반죽/우유/팥앙금
+    g2.appendChild(makeTierCard({
+      iconTitle: `<img class="icon" src="assets/icons/batter.png"> 반죽`,
+      tierArr: BATTER_TIERS,
+      tierKey: "batterTier",
+      buyKey: "batter",
+      upgradeFn: upgradeBatter,
+      rule: BATTER_UPGRADE_RULE
+    }));
+
+    g2.appendChild(makeTierCard({
+      iconTitle: `<img class="icon" src="assets/icons/milk.png"> 우유`,
+      tierArr: MILK_TIERS,
+      tierKey: "milkTier",
+      buyKey: "milk",
+      upgradeFn: upgradeMilk,
+      rule: MILK_UPGRADE_RULE
+    }));
+
+    g2.appendChild(makeSimpleCard());
+
+    grid.appendChild(g1);
+    grid.appendChild(g2);
+    root.appendChild(grid);
+  }
+
+  /************************************************************
+   * 리셋
+   ************************************************************/
+  function reset(){
+    state.upgrades.redbeanTier = 0;
+    state.upgrades.ricecakeTier = 0;
+    state.upgrades.iceTier = 0;
+    state.upgrades.batterTier = 0;
+    state.upgrades.milkTier = 0;
+    state.run.maxCustomers = 100;
+state.run.customersSpawned = 0;
+state.run.ended = false;
+state.run.endAt = 0;
+    state.money = 10000;
+    state.revenue = 0;
+    state.value = 0;
+    for (const k in state.inv) state.inv[k]=0;
+    state.price.bingsu = 2000;
+    state.price.fish = 700;
+
+    state.orders = [];
+    state.nextCustomerAt = 0;
+    clearTimeout(state.customerTimerId);
+    state.customerTimerId = null;
+
+    el("log").innerHTML = "";
+    log("리셋 완료. 10,000원 지급.");
+
+    renderShop();
+    syncUI();
+    scheduleNextCustomer();
+    loadTopRanks();
+      loadMyRankIntoUI(); // 아래 2번에서 추가할 함수
+  }
+
+  /************************************************************
+   * 이벤트 바인딩
+   ************************************************************/
+  el("s_bingsu").addEventListener("input", (e)=>{ state.price.bingsu = Number(e.target.value); syncUI(); });
+  el("s_fish").addEventListener("input", (e)=>{ state.price.fish = Number(e.target.value); syncUI(); });
+  el("makeBingsu").onclick = makeBingsu;
+  el("makeFish").onclick = makeFish;
+  el("resetBtn").onclick = reset;
+  // ✅ (B) 랭킹 등록 버튼 클릭 이벤트 (여기에 추가)
+  el("submitRank").onclick = async ()=>{
+  try{
+    const name = el("playerName").value.trim();
+    if (name.length < 2 || name.length > 10) return log("닉네임은 2~10자로 입력하세요.");
+    localStorage.setItem(LS_NAME_KEY, name);
+
+    const snapRevenue = state.revenue;
+    log(`⏳ 랭킹 저장 시도... (등록 매출: ${fmt(snapRevenue)}원)`);
+    await saveMyRank(snapRevenue);
+    await loadTopRanks();
+    log(`✅ 랭킹 등록 완료: ${name} / ${fmt(snapRevenue)}원`);
+  }catch(e){
+    console.error(e);
+    log(`❌ 랭킹 등록 실패: ${e?.message || e}`);
+  }
+};
+
+
+
+  /************************************************************
+   * 시작
+   ************************************************************/
+async function waitFirebaseReady(){
+  while(!window.firebaseReady) {
+    await new Promise(r => setTimeout(r, 30));
+  }
+  await window.firebaseReady;
+}
+
+(async ()=>{
+  await waitFirebaseReady();   // ✅ 여기로 변경
+  renderShop();
+  reset();
+})();
+</script>
+</body>
+</html>
